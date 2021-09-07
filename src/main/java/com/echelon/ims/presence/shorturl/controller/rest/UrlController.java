@@ -27,10 +27,7 @@ public class UrlController
 {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
     
-    /**
-     * The base url of the generated short url.
-     * Must include a slash at the end of the url.
-     */
+  
     @Value("${com.echelon.ims.presence.shorturl.property.baseUrl}")
     private String baseUrl;
     
@@ -82,15 +79,7 @@ public class UrlController
         int counter = 0;  // hash collision retry counter
         while (urlRepository.findOneByHash(hash) != null && counter < 2)
         {
-            /*
-             * Handle the scenario where the generated hash
-             *  already exists in the database by generating
-             *  a hash, but if a hash collision occurs try
-             *  to re-generate the hash two more times. A
-             *  repetition should rarely occur, much less a
-             *  second repetition, so we quit after trying
-             *  again twice.
-             */
+    
             
             logger.warn("Hash collision detected. {collision.hash} Regenerating the hash.");    
             hash = Hashing.murmur3_32().hashString(System.currentTimeMillis() + longUrl, StandardCharsets.UTF_8).toString();
@@ -98,14 +87,12 @@ public class UrlController
             counter++;
         }
         
-        // If the code above is unable to generate a unique hash, return a server error
         if (counter == 2)
         {
             logger.error("Too many hash collisions detected. {collision.hash} Tried to regenerate hash {} times for [longUrl={}].", counter, longUrl);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);  // HTTP 500
         }
         
-        // TODO make sure hashed value is a clean value (readable I vs i, also maybe all lowercase? also no bad words)
         String shortUrl = baseUrl + hash;
         
         urlRepository.save(new Url(hash, shortUrl, longUrl));
